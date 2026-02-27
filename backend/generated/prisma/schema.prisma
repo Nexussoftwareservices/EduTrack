@@ -1,0 +1,372 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ENUMS
+enum Role {
+  MAIN_ADMIN
+  INST_ADMIN
+  TRAINER
+  STUDENT
+}
+
+enum InstituteStatus {
+  PENDING
+  ACTIVE
+  BLOCKED
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  EXPIRED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  SUCCESS
+  FAILED
+  PENDING
+}
+
+enum StudentStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum BatchStatus {
+  ONGOING
+  COMPLETED
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+}
+
+// USER Schema 
+model User {
+  id         Int     @id @default(autoincrement())
+  name       String
+  email      String  @unique
+  password   String
+  role       Role
+  phone      String?
+  isVerified Boolean @default(false)
+  isActive   Boolean @default(true)
+
+  trainer Trainer?
+  student Student?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  activityLogs ActivityLog[]
+}
+
+// Institute Schema
+model Institute {
+  id      Int             @id @default(autoincrement())
+  name    String
+  email   String
+  phone   String
+  address String?
+  status  InstituteStatus @default(PENDING)
+
+  planId Int?
+  plan   SubscriptionPlan? @relation(fields: [planId], references: [id])
+
+  subscriptions Subscription[]
+  payments      Payment[]
+  trainers      Trainer[]
+  students      Student[]
+  batches       Batch[]
+
+  createdAt DateTime @default(now())
+
+  @@index([status])
+}
+
+// Subscription & Payment Schema
+model SubscriptionPlan {
+  id             Int     @id @default(autoincrement())
+  name           String
+  price          Decimal @db.Decimal(10, 2)
+  durationMonths Int
+  maxStudents    Int
+  maxBatches     Int
+  features       Json?
+
+  institutes    Institute[]
+  subscriptions Subscription[]
+}
+
+model Subscription {
+  id          Int                @id @default(autoincrement())
+  instituteId Int
+  planId      Int
+  institute   Institute          @relation(fields: [instituteId], references: [id])
+  plan        SubscriptionPlan   @relation(fields: [planId], references: [id])
+  startDate   DateTime
+  endDate     DateTime
+  status      SubscriptionStatus
+  payments    Payment[]
+
+  @@index([instituteId])
+}
+
+model Payment {
+  id             Int @id @default(autoincrement())
+  instituteId    Int
+  subscriptionId Int
+
+  institute    Institute    @relation(fields: [instituteId], references: [id])
+  subscription Subscription @relation(fields: [subscriptionId], references: [id])
+
+  amount        Decimal       @db.Decimal(10, 2)
+  paymentMethod String
+  paymentStatus PaymentStatus
+  transactionId String?
+
+  createdAt DateTime @default(now())
+
+  @@index([instituteId])
+}
+
+model Trainer {
+  id          Int       @id @default(autoincrement())
+  userId      Int       @unique
+  instituteId Int
+  user        User      @relation(fields: [userId], references: [id])
+  institute   Institute @relation(fields: [instituteId], references: [id])
+
+  specialization String?
+  bio            String?
+
+  batches   Batch[]
+  createdAt DateTime @default(now())
+
+  @@index([instituteId])
+}
+
+model Student {
+  id          Int @id @default(autoincrement())
+  userId      Int @unique
+  instituteId Int
+
+  user      User      @relation(fields: [userId], references: [id])
+  institute Institute @relation(fields: [instituteId], references: [id])
+
+  enrollmentNo String?
+  status       StudentStatus @default(ACTIVE)
+
+  batchStudents BatchStudent[]
+  submissions   TestSubmission[]
+  certificates  Certificate[]
+  attendance    Attendance[]
+
+  joinedAt DateTime @default(now())
+
+  @@index([instituteId])
+}
+
+// Batch Model
+
+model Batch {
+  id          Int @id @default(autoincrement())
+  instituteId Int
+  trainerId   Int
+
+  name      String
+  startDate DateTime?
+  endDate   DateTime?
+  status    BatchStatus @default(ONGOING)
+
+  institute Institute @relation(fields: [instituteId], references: [id])
+  trainer   Trainer   @relation(fields: [trainerId], references: [id])
+
+  students BatchStudent[]
+  courses  Course[]
+  meetings Meeting[]
+
+  @@index([instituteId])
+}
+
+// Students Associated with Batch
+model BatchStudent {
+  id        Int @id @default(autoincrement())
+  batchId   Int
+  studentId Int
+
+  batch   Batch   @relation(fields: [batchId], references: [id])
+  student Student @relation(fields: [studentId], references: [id])
+
+  joinedAt DateTime @default(now())
+
+  @@unique([batchId, studentId])
+}
+
+// Course & Material Section
+model Course {
+  id      Int @id @default(autoincrement())
+  batchId Int
+
+  title       String
+  description String?
+
+  batch Batch @relation(fields: [batchId], references: [id])
+
+  materials    CourseMaterial[]
+  tests        Test[]
+  certificates Certificate[]
+
+  createdAt DateTime @default(now())
+}
+
+model CourseMaterial {
+  id       Int @id @default(autoincrement())
+  courseId Int
+
+  title   String
+  fileUrl String
+
+  course Course @relation(fields: [courseId], references: [id])
+
+  uploadedAt DateTime @default(now())
+}
+
+// Meeting & Recordings
+model Meeting {
+  id              Int          @id @default(autoincrement())
+  batchId         Int
+  title           String
+  meetingLink     String
+  scheduledAt     DateTime
+  durationMinutes Int?
+  batch           Batch        @relation(fields: [batchId], references: [id])
+  recordings      Recording[]
+  attendance      Attendance[]
+}
+
+model Recording {
+  id         Int      @id @default(autoincrement())
+  meetingId  Int
+  videoUrl   String // S3 URL
+  meeting    Meeting  @relation(fields: [meetingId], references: [id])
+  uploadedAt DateTime @default(now())
+}
+
+// TEST model
+model Test {
+  id              Int              @id @default(autoincrement())
+  courseId        Int
+  title           String
+  totalMarks      Int
+  durationMinutes Int
+  course          Course           @relation(fields: [courseId], references: [id])
+  questions       Question[]
+  submissions     TestSubmission[]
+  createdAt       DateTime         @default(now())
+}
+
+model Question {
+  id           Int      @id @default(autoincrement())
+  testId       Int
+  questionText String
+  marks        Int
+  test         Test     @relation(fields: [testId], references: [id])
+  options      Option[]
+}
+
+model Option {
+  id         Int      @id @default(autoincrement())
+  questionId Int
+  optionText String
+  isCorrect  Boolean
+  question   Question @relation(fields: [questionId], references: [id])
+}
+
+model TestSubmission {
+  id            Int      @id @default(autoincrement())
+  testId        Int
+  studentId     Int
+  obtainedMarks Int
+  test          Test     @relation(fields: [testId], references: [id])
+  student       Student  @relation(fields: [studentId], references: [id])
+  submittedAt   DateTime @default(now())
+
+  @@unique([testId, studentId])
+}
+
+// Certificate Section -- SCHEMA
+model Certificate {
+  id        Int @id @default(autoincrement())
+  studentId Int
+  courseId  Int
+
+  certificateUrl String
+  student        Student  @relation(fields: [studentId], references: [id])
+  course         Course   @relation(fields: [courseId], references: [id])
+  issuedAt       DateTime @default(now())
+}
+
+// Attendance
+model Attendance {
+  id        Int              @id @default(autoincrement())
+  meetingId Int
+  studentId Int
+  status    AttendanceStatus
+  meeting   Meeting          @relation(fields: [meetingId], references: [id])
+  student   Student          @relation(fields: [studentId], references: [id])
+
+  @@unique([meetingId, studentId])
+}
+
+// Company Website - Section -- SCHEMA'S
+model Service {
+  id          Int    @id @default(autoincrement())
+  title       String
+  description String
+}
+
+model Internship {
+  id          Int      @id @default(autoincrement())
+  title       String
+  description String
+  location    String?
+  stipend     Decimal? @db.Decimal(10, 2)
+  duration    String?
+  createdAt   DateTime @default(now())
+
+  applications InternshipApplication[]
+}
+
+model InternshipApplication {
+  id           Int @id @default(autoincrement())
+  internshipId Int
+
+  name      String
+  email     String
+  resumeUrl String
+
+  internship Internship @relation(fields: [internshipId], references: [id])
+
+  appliedAt DateTime @default(now())
+}
+
+model ActivityLog {
+  id     Int @id @default(autoincrement())
+  userId Int
+
+  action   String
+  entity   String
+  entityId Int?
+
+  user User @relation(fields: [userId], references: [id])
+
+  createdAt DateTime @default(now())
+}
