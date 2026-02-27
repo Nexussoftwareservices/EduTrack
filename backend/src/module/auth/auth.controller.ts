@@ -34,9 +34,7 @@ export const forgotPassword = async (req: Request, res: Response) => {
 
     const result = await forgotPasswordUser(email);
 
-    return ApiResponse(res, 200, true, result.message, {
-      resetToken: result.resetToken,
-    });
+    return ApiResponse(res, 200, true, result.message);
   } catch (error: any) {
     return ApiResponse(res, 400, false, error.message);
   }

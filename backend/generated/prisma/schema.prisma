@@ -1,6 +1,7 @@
 generator client {
-  provider = "prisma-client-js"
-  output   = "../generated/prisma"
+  provider   = "prisma-client-js"
+  engineType = "binary"
+  output     = "../generated/prisma"
 }
 
 datasource db {
@@ -65,7 +66,8 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  activityLogs ActivityLog[]
+  activityLogs   ActivityLog[]
+  passwordResets PasswordReset[]
 }
 
 // Institute Schema
@@ -369,4 +371,17 @@ model ActivityLog {
   user User @relation(fields: [userId], references: [id])
 
   createdAt DateTime @default(now())
+}
+
+// Password Reset Schema - Token based password reset
+model PasswordReset {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  token     String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
 }

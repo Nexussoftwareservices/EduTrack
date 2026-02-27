@@ -321,6 +321,14 @@ exports.Prisma.ActivityLogScalarFieldEnum = {
   createdAt: 'createdAt'
 };
 
+exports.Prisma.PasswordResetScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  token: 'token',
+  expiresAt: 'expiresAt',
+  createdAt: 'createdAt'
+};
+
 exports.Prisma.SortOrder = {
   asc: 'asc',
   desc: 'desc'
@@ -409,7 +417,8 @@ exports.Prisma.ModelName = {
   Service: 'Service',
   Internship: 'Internship',
   InternshipApplication: 'InternshipApplication',
-  ActivityLog: 'ActivityLog'
+  ActivityLog: 'ActivityLog',
+  PasswordReset: 'PasswordReset'
 };
 
 /**
