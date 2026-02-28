@@ -15,10 +15,6 @@ interface RegisterInput {
 }
 
 export const registerUser = async (data: RegisterInput) => {
-  if (data.role === "MAIN_ADMIN") {
-    throw new Error("Main admin cannot be registered manually");
-  }
-
   const existingUser = await prisma.user.findUnique({
     where: { email: data.email },
   });
@@ -27,7 +23,17 @@ export const registerUser = async (data: RegisterInput) => {
     throw new Error("Email already registered");
   }
 
-  let institute = null;
+  if (!data.instituteId) {
+    throw new Error("Institute is required");
+  }
+
+  const institute = await prisma.institute.findUnique({
+    where: { id: data.instituteId },
+  });
+
+  if (!institute || institute.status !== "ACTIVE") {
+    throw new Error("Invalid or inactive institute");
+  }
 
   const hashedPassword = await hashPassword(data.password);
 
@@ -44,7 +50,7 @@ export const registerUser = async (data: RegisterInput) => {
     await prisma.student.create({
       data: {
         userId: user.id,
-        instituteId: data.instituteId!,
+        instituteId: institute.id,
       },
     });
   }
@@ -53,25 +59,28 @@ export const registerUser = async (data: RegisterInput) => {
     await prisma.trainer.create({
       data: {
         userId: user.id,
-        instituteId: data.instituteId!,
+        instituteId: institute.id,
       },
     });
   }
 
-  if (data.role === "INST_ADMIN") {
-  }
-
-  // 7️⃣ Generate JWT
   const token = generateToken({
     userId: user.id,
     role: user.role,
-    instituteId: data.instituteId ?? null,
+    instituteId: institute.id,
   });
 
   return { user, token };
 };
 
 export const loginUser = async (email: string, password: string) => {
+  if (!email || !password) {
+    throw {
+      statusCode: 400,
+      message: "Email and password are required",
+    };
+  }
+
   const user = await prisma.user.findUnique({
     where: { email },
     include: {
@@ -81,17 +90,35 @@ export const loginUser = async (email: string, password: string) => {
   });
 
   if (!user) {
-    throw new Error("Invalid credentials");
+    throw {
+      statusCode: 401,
+      message: "Invalid email or password",
+    };
   }
 
   if (!user.isActive) {
-    throw new Error("Account is inactive");
+    throw {
+      statusCode: 403,
+      message: "Account is inactive",
+    };
   }
 
-  const isPasswordValid = await comparePassword(password, user.password);
+  let isPasswordValid = false;
+
+  try {
+    isPasswordValid = await comparePassword(password, user.password);
+  } catch (err) {
+    throw {
+      statusCode: 500,
+      message: "Authentication failed",
+    };
+  }
 
   if (!isPasswordValid) {
-    throw new Error("Invalid credentials");
+    throw {
+      statusCode: 401,
+      message: "Invalid email or password",
+    };
   }
 
   let instituteId: number | null = null;
@@ -99,13 +126,17 @@ export const loginUser = async (email: string, password: string) => {
   if (user.student) instituteId = user.student.instituteId;
   if (user.trainer) instituteId = user.trainer.instituteId;
 
+  // 4️⃣ Institute validation
   if (instituteId) {
     const institute = await prisma.institute.findUnique({
       where: { id: instituteId },
     });
 
     if (!institute || institute.status !== "ACTIVE") {
-      throw new Error("Institute is blocked or inactive");
+      throw {
+        statusCode: 403,
+        message: "Institute is blocked or inactive",
+      };
     }
   }
 
@@ -115,7 +146,10 @@ export const loginUser = async (email: string, password: string) => {
     instituteId,
   });
 
-  return { user, token };
+  // 5️⃣ Remove password before returning
+  const { password: _, ...safeUser } = user;
+
+  return { user: safeUser, token };
 };
 
 export const forgotPasswordUser = async (email: string) => {

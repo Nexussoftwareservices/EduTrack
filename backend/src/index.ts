@@ -11,11 +11,20 @@ const startServer = async () => {
     await prisma.$connect();
     console.log("✅ Database connected");
 
+    await prisma.institute.create({
+      data: {
+        name: "Test Institute",
+        email: "test@inst.com",
+        phone: "1234567890",
+        status: "ACTIVE",
+      },
+    });
+
     app.listen(PORT, () => {
       console.log(`🚀 Server running on http://localhost:${PORT}`);
     });
   } catch (error) {
-    console.error("❌ Failed to start server:", error);
+    console.error("Failed to start server:", error);
     process.exit(1);
   }
 };

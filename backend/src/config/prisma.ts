@@ -4,14 +4,12 @@ import { Pool } from "pg";
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 
-// 2. Initialize the Adapter
 const adapter = new PrismaPg(pool);
 
 declare global {
   var prisma: PrismaClient | undefined;
 }
-
-// 3. Pass the adapter to the constructor
+console.log("SMTP HOST:", process.env.SMTP_HOST);
 const prisma =
   global.prisma ||
   new PrismaClient({

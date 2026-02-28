@@ -1,20 +1,28 @@
 import nodemailer from "nodemailer";
 
 const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST,
-  port: Number(process.env.SMTP_PORT),
-  secure: false, 
+  service: "gmail",
   auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
+    user: process.env.EMAIL_SMTP_USER,
+    pass: process.env.EMAIL_SMTP_PASS,
   },
 });
 
 export const sendEmail = async (to: string, subject: string, html: string) => {
-  await transporter.sendMail({
-    from: process.env.SMTP_FROM,
-    to,
-    subject,
-    html,
-  });
+  try {
+    const info = await transporter.sendMail({
+      from: `"EduTrack" <${process.env.EMAIL_SMTP_USER}>`,
+      to,
+      subject,
+      html,
+    });
+
+    console.log("📧 Email sent successfully:", info.messageId);
+  } catch (error: any) {
+    console.error("❌ Nodemailer Error Detail:", error);
+    throw {
+      statusCode: 500,
+      message: error.message || "Failed to send email",
+    };
+  }
 };
