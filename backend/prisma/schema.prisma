@@ -169,7 +169,8 @@ model Student {
   certificates  Certificate[]
   attendance    Attendance[]
 
-  joinedAt DateTime @default(now())
+  joinedAt      DateTime       @default(now())
+  notifications Notification[]
 
   @@index([instituteId])
 }
@@ -382,4 +383,16 @@ model PasswordReset {
   user User @relation(fields: [userId], references: [id])
 
   @@index([userId])
+}
+
+// Notification Schema Model
+model Notification {
+  id        Int      @id @default(autoincrement())
+  studentId Int
+  title     String
+  message   String
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  student Student @relation(fields: [studentId], references: [id])
 }

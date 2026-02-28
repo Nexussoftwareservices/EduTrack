@@ -1,12 +1,18 @@
-import { Response, NextFunction } from "express";
-import { AuthRequest } from "./auth.middleware";
+import { Request, Response, NextFunction } from "express";
 import { ApiResponse } from "../utils/apiResponse";
+import { Role } from "@prisma/client";
 
-export const roleMiddleware = (...allowedRoles: string[]) => {
-  return (req: AuthRequest, res: Response, next: NextFunction) => {
-    if (!req.user || !allowedRoles.includes(req.user.role)) {
-      return ApiResponse(res, 403, false, "Forbidden");
+
+export const authorizeRoles = (...allowedRoles: Role[]) => {
+  return (req: Request, res: Response, next: NextFunction) => {
+    if (!req.user) {
+      return ApiResponse(res, 401, false, "Unauthorized");
     }
+
+    if (!allowedRoles.includes(req.user.role)) {
+      return ApiResponse(res, 403, false, "Access denied");
+    }
+
     next();
   };
 };

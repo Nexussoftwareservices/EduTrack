@@ -43,7 +43,7 @@ export const forgotPassword = async (req: Request, res: Response) => {
     return ApiResponse(res, 200, true, result.message);
   } catch (error: any) {
     console.error("Error: ", error);
-    return ApiResponse(res, 400, false, error.message);
+    return ApiResponse(res, 500, false, error.message);
   }
 };
 
@@ -56,6 +56,6 @@ export const resetPassword = async (req: Request, res: Response) => {
     return ApiResponse(res, 200, true, result.message);
   } catch (error: any) {
     console.error("Error: ", error);
-    return ApiResponse(res, 400, false, error.message);
+    return ApiResponse(res, 500, false, error.message);
   }
 };

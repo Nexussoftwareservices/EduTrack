@@ -1,26 +1,16 @@
 import { Request, Response, NextFunction } from "express";
-import { verifyJwt } from "../utils/jwt";
+import jwt from "jsonwebtoken";
 import { ApiResponse } from "../utils/apiResponse";
+import { Role } from "@prisma/client";
 
-export interface AuthRequest extends Request {
-  user?: {
-    userId: number;
-    role: string;
-    instituteId?: number | null;
-  };
+interface JwtPayload {
+  userId: number;
+  role: Role;
+  instituteId: number | null;
 }
-
-/**
- *  JWT Structure Looks Like
-{
-"userId": 12,
-"role": "INST_ADMIN",
-"instituteId": 3
-}
- */
 
 export const authMiddleware = (
-  req: AuthRequest,
+  req: Request,
   res: Response,
   next: NextFunction,
 ) => {
@@ -33,8 +23,13 @@ export const authMiddleware = (
   const token = authHeader.split(" ")[1];
 
   try {
-    const decoded = verifyJwt(token);
-    req.user = decoded;
+    const decoded = jwt.verify(
+      token,
+      process.env.JWT_SECRET as string,
+    ) as JwtPayload;
+
+    req.user = decoded; // Attached globally via express.d.ts
+
     next();
   } catch (error) {
     return ApiResponse(res, 401, false, "Invalid or expired token");
