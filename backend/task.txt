@@ -1,0 +1,49 @@
+1. Authentication Module
+ - Be isolated as a Module
+ - Using Prisma Client
+ - Utils for : JWT, Hashing, ApiResponse
+
+
+src/
+│
+├── config/
+│   ├── prisma.ts              // Prisma client instance
+│   ├── env.ts                 // environment variables loader
+│
+├── modules/
+│   ├── auth/
+│   │   ├── auth.controller.ts
+│   │   ├── auth.service.ts
+│   │   ├── auth.routes.ts
+│   │   ├── auth.types.ts
+│   │   ├── auth.validation.ts
+│   │
+│   │   ├── strategies/        // future extensibility
+│   │   │   ├── jwt.strategy.ts
+│   │   │   └── role.guard.ts
+│   │
+│   │   ├── dto/
+│   │   │   ├── login.dto.ts
+│   │   │   ├── register.dto.ts
+│   │   │   ├── forgot-password.dto.ts
+│   │   │   └── reset-password.dto.ts
+│
+│   ├── user/
+│   │   ├── user.service.ts
+│   │   ├── user.routes.ts
+│   │
+│
+├── middlewares/
+│   ├── auth.middleware.ts     // verify JWT
+│   ├── role.middleware.ts     // check role
+│
+├── utils/
+│   ├── apiResponse.ts
+│   ├── jwt.ts
+│   ├── hash.ts
+│   ├── generateToken.ts
+│   ├── otp.ts                 // for forgot password
+│
+├── routes.ts                  
+├── app.ts
+├── server.ts
